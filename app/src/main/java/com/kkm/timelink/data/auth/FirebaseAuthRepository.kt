@@ -15,7 +15,7 @@ class FirebaseAuthRepository @Inject constructor(
     override suspend fun signInWithGoogle(idToken: String): String {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         val result = firebaseAuth.signInWithCredential(credential).await()
-        return result.user?.uid ?: error("Firebase user is missing after Google sign-in.")
+        return result.user?.uid ?: error("Google 로그인 사용자 정보를 찾을 수 없습니다.")
     }
 
     override suspend fun signOut() {

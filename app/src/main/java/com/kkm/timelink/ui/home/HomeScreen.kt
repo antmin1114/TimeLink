@@ -2,9 +2,12 @@ package com.kkm.timelink.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,7 +18,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen(
     currentUserId: String,
-    isLoading: Boolean,
+    isSigningOut: Boolean,
+    onProfileClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -35,11 +39,28 @@ fun HomeScreen(
             modifier = Modifier.padding(top = 12.dp)
         )
         Button(
-            onClick = onSignOutClick,
-            enabled = !isLoading,
+            onClick = onProfileClick,
+            enabled = !isSigningOut,
             modifier = Modifier.padding(top = 24.dp)
         ) {
-            Text(text = "로그아웃")
+            Text(text = "프로필")
+        }
+        Button(
+            onClick = onSignOutClick,
+            enabled = !isSigningOut,
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            Text(text = if (isSigningOut) "로그아웃 중" else "로그아웃")
+        }
+        if (isSigningOut) {
+            Row(
+                modifier = Modifier.padding(top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                Text(text = "로그아웃 처리 중입니다")
+            }
         }
     }
 }

@@ -5,13 +5,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.credentials.ClearCredentialStateRequest
-import androidx.credentials.CredentialManager
-import androidx.credentials.CustomCredential
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCustomException
-import androidx.credentials.exceptions.GetCredentialException
-import androidx.credentials.exceptions.NoCredentialException
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -23,16 +16,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCustomException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.kkm.timelink.ui.auth.AuthEvent
 import com.kkm.timelink.ui.auth.AuthViewModel
 import com.kkm.timelink.ui.auth.LoginScreen
 import com.kkm.timelink.ui.home.HomeScreen
+import com.kkm.timelink.ui.profile.ProfileEvent
+import com.kkm.timelink.ui.profile.ProfileScreen
+import com.kkm.timelink.ui.profile.ProfileViewModel
 import com.kkm.timelink.ui.theme.TimeLinkTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -115,9 +120,15 @@ fun TimeLinkApp(
             composable(TimeLinkRoute.Home.route) {
                 HomeScreen(
                     currentUserId = uiState.currentUserId.orEmpty(),
-                    isLoading = uiState.isLoading,
+                    isSigningOut = uiState.isSigningOut,
+                    onProfileClick = {
+                        uiState.currentUserId?.let { uid ->
+                            navController.navigate("profile/$uid")
+                        }
+                    },
                     onSignOutClick = {
                         coroutineScope.launch {
+                            authViewModel.beginSignOut()
                             runCatching {
                                 credentialManager.clearCredentialState(
                                     ClearCredentialStateRequest()
@@ -126,6 +137,40 @@ fun TimeLinkApp(
                             authViewModel.signOut()
                         }
                     }
+                )
+            }
+            composable(
+                route = TimeLinkRoute.Profile.route,
+                arguments = listOf(navArgument("uid") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val profileViewModel: ProfileViewModel = hiltViewModel(backStackEntry)
+                val profileUiState by profileViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    profileViewModel.events.collect { event ->
+                        when (event) {
+                            ProfileEvent.Saved -> Toast.makeText(
+                                context,
+                                "프로필을 저장했습니다.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            is ProfileEvent.Error -> Toast.makeText(
+                                context,
+                                event.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+
+                ProfileScreen(
+                    uiState = profileUiState,
+                    onNicknameChange = profileViewModel::updateNickname,
+                    onBioChange = profileViewModel::updateBio,
+                    onProfileImageUrlChange = profileViewModel::updateProfileImageUrl,
+                    onSaveClick = profileViewModel::saveProfile,
+                    onBackClick = { navController.popBackStack() }
                 )
             }
         }
@@ -196,5 +241,6 @@ private fun buildGoogleCredentialRequest(
 
 private enum class TimeLinkRoute(val route: String) {
     Login("login"),
-    Home("home")
+    Home("home"),
+    Profile("profile/{uid}")
 }

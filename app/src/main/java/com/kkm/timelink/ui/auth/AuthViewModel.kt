@@ -3,6 +3,7 @@ package com.kkm.timelink.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kkm.timelink.domain.repository.AuthRepository
+import com.kkm.timelink.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +17,7 @@ import javax.inject.Inject
 
 data class AuthUiState(
     val isLoading: Boolean = false,
+    val isSigningOut: Boolean = false,
     val currentUserId: String? = null
 ) {
     val isSignedIn: Boolean = currentUserId != null
@@ -27,7 +29,8 @@ sealed interface AuthEvent {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -40,7 +43,7 @@ class AuthViewModel @Inject constructor(
 
     fun signInWithGoogle(idToken: String?) {
         if (idToken.isNullOrBlank()) {
-            emitError("Google 로그인 토큰을 가져오지 못했습니다.")
+            emitError("사용 가능한 Google 계정을 찾을 수 없습니다.")
             return
         }
 
@@ -55,36 +58,43 @@ class AuthViewModel @Inject constructor(
                         currentUserId = uid
                     )
                 }
-            }.onFailure { throwable ->
+                createProfileIfMissing(uid)
+            }.onFailure {
                 _uiState.update { it.copy(isLoading = false) }
-                _events.emit(
-                    AuthEvent.Error(
-                        throwable.message ?: "Google 로그인에 실패했습니다."
-                    )
-                )
+                _events.emit(AuthEvent.Error("Google 로그인에 실패했습니다."))
             }
         }
     }
 
+    fun beginSignOut() {
+        _uiState.update { it.copy(isSigningOut = true) }
+    }
+
     fun signOut() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isSigningOut = true) }
             runCatching {
                 authRepository.signOut()
             }.onSuccess {
                 _uiState.update {
                     it.copy(
-                        isLoading = false,
+                        isSigningOut = false,
                         currentUserId = null
                     )
                 }
-            }.onFailure { throwable ->
-                _uiState.update { it.copy(isLoading = false) }
-                _events.emit(
-                    AuthEvent.Error(
-                        throwable.message ?: "로그아웃에 실패했습니다."
-                    )
-                )
+            }.onFailure {
+                _uiState.update { it.copy(isSigningOut = false) }
+                _events.emit(AuthEvent.Error("로그아웃에 실패했습니다."))
+            }
+        }
+    }
+
+    private fun createProfileIfMissing(uid: String) {
+        viewModelScope.launch {
+            runCatching {
+                userRepository.createUserIfMissing(uid)
+            }.onFailure {
+                _events.emit(AuthEvent.Error("로그인은 완료됐지만 프로필 생성에 실패했습니다."))
             }
         }
     }
