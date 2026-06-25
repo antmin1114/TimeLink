@@ -158,7 +158,7 @@ time_slots/{slotId}
 
 ## 5.2 목적
 
-Host가 예약 가능한 시간대를 저장한다.
+Host가 등록한 예약 가능 시간 범위를 자동 분할하여 생성된 개별 TimeSlot을 저장한다.
 
 ## 5.3 필드
 
@@ -168,7 +168,7 @@ Host가 예약 가능한 시간대를 저장한다.
 | hostId | String | O | 예약을 받는 사람 UID |
 | startAt | Long | O | 시작 시간 |
 | endAt | Long | O | 종료 시간 |
-| durationMinutes | Int | O | 30 또는 60 |
+| durationMinutes | Int | O | 슬롯 하나의 길이(30분 또는 60분) |
 | status | String | O | AVAILABLE / RESERVED / DISABLED |
 | createdAt | Long | O | 생성 시간 |
 | updatedAt | Long | O | 수정 시간 |
@@ -217,9 +217,9 @@ reservations/{reservationId}
 | id | String | O | reservationId |
 | hostId | String | O | 예약 받는 사람 UID |
 | guestId | String | O | 예약 신청자 UID |
-| slotId | String | O | 선택한 TimeSlot ID |
-| startAt | Long | O | 예약 시작 시간 복사본 |
-| endAt | Long | O | 예약 종료 시간 복사본 |
+| slotIds | List<String> | O | 선택한 연속 TimeSlot ID 목록 |
+| startAt | Long | O | 첫 번째 선택 슬롯의 시작 시간 복사본 |
+| endAt | Long | O | 마지막 선택 슬롯의 종료 시간 복사본 |
 | purpose | String | O | COFFEE_CHAT / MEAL / STUDY / CONSULTING / ETC |
 | message | String | O | 신청 메시지 |
 | status | String | O | PENDING / APPROVED / REJECTED / CANCELLED |
@@ -253,7 +253,10 @@ reservations/{reservationId}
   "id": "reservation_123",
   "hostId": "host_uid_123",
   "guestId": "guest_uid_456",
-  "slotId": "slot_123",
+  "slotIds": [
+    "slot_123",
+    "slot_124"
+  ],
   "startAt": 1781600000000,
   "endAt": 1781603600000,
   "purpose": "COFFEE_CHAT",
@@ -274,9 +277,11 @@ reservations/{reservationId}
 조건:
 
 - guestId는 로그인한 사용자 UID여야 한다.
-- time_slots/{slotId}.status가 AVAILABLE이어야 한다.
+- slotIds는 비어 있지 않아야 하며 시간 순서대로 연속된 TimeSlot ID 목록이어야 한다.
+- slotIds에 포함된 모든 time_slots 문서의 status가 AVAILABLE이어야 한다.
+- slotIds에 포함된 슬롯 사이에 RESERVED 또는 DISABLED 슬롯이 없어야 한다.
 - 과거 시간 슬롯은 신청할 수 없다.
-- 동일 slotId에 PENDING 또는 APPROVED 예약이 있으면 신청할 수 없다.
+- slotIds 중 하나라도 PENDING 또는 APPROVED 예약에 포함되어 있으면 신청할 수 없다.
 
 처리:
 
@@ -285,7 +290,7 @@ reservations 생성
 status = PENDING
 ```
 
-time_slots 상태는 변경하지 않는다.
+slotIds에 포함된 time_slots 상태는 변경하지 않는다.
 
 ---
 
@@ -295,18 +300,18 @@ time_slots 상태는 변경하지 않는다.
 
 - 로그인한 사용자가 hostId와 같아야 한다.
 - reservation.status가 PENDING이어야 한다.
-- time_slots.status가 AVAILABLE이어야 한다.
+- slotIds에 포함된 모든 time_slots 문서의 status가 AVAILABLE이어야 한다.
 
 처리:
 
 ```text
 reservation.status = APPROVED
-time_slots.status = RESERVED
+slotIds에 포함된 모든 time_slots.status = RESERVED
 ```
 
 주의:
 
-예약 승인과 슬롯 상태 변경은 반드시 Transaction으로 처리한다.
+예약 승인과 slotIds에 포함된 모든 슬롯의 상태 변경은 반드시 Transaction으로 처리한다.
 
 ---
 
@@ -325,7 +330,7 @@ reservation.status = REJECTED
 reservation.rejectReason = 입력한 사유
 ```
 
-time_slots 상태는 변경하지 않는다.
+slotIds에 포함된 time_slots 상태는 변경하지 않는다.
 
 ---
 
@@ -344,7 +349,7 @@ reservation.status = CANCELLED
 
 추가 처리:
 
-APPROVED 상태였던 예약을 취소하면
+APPROVED 상태였던 예약을 취소하면 slotIds에 포함된 모든 슬롯을
 
 ```text
 time_slots.status = AVAILABLE
@@ -358,19 +363,19 @@ time_slots.status = AVAILABLE
 
 # 8. 중복 예약 방지 규칙
 
-MVP에서는 승인 전까지 같은 슬롯에 여러 PENDING 예약을 허용하지 않는다.
+MVP에서는 승인 전까지 같은 슬롯이 여러 PENDING 예약에 포함되는 것을 허용하지 않는다.
 
-즉, 하나의 slotId에는 PENDING 또는 APPROVED 예약이 하나만 존재해야 한다.
+즉, 하나의 TimeSlot ID에는 PENDING 또는 APPROVED 예약이 하나만 존재해야 한다.
 
-예약 신청 시 아래 조건을 검사한다.
+예약 신청 시 slotIds에 포함된 각 TimeSlot ID에 대해 아래 조건을 검사한다.
 
 ```text
 reservations
-where slotId == 선택한 slotId
+where slotIds array-contains 선택한 TimeSlot ID
 where status in [PENDING, APPROVED]
 ```
 
-결과가 있으면 예약 신청을 막는다.
+slotIds에 포함된 TimeSlot ID 중 하나라도 결과가 있으면 예약 신청을 막는다.
 
 ---
 
@@ -420,6 +425,16 @@ where status == PENDING
 orderBy createdAt desc
 ```
 
+## 9.6 선택 슬롯의 중복 예약 조회
+
+slotIds에 포함된 각 TimeSlot ID에 대해 반복 조회한다.
+
+```text
+reservations
+where slotIds array-contains 선택한 TimeSlot ID
+where status in [PENDING, APPROVED]
+```
+
 ---
 
 # 10. 필요한 Firestore Index
@@ -460,7 +475,7 @@ createdAt DESC
 
 ```text
 reservations
-slotId ASC
+slotIds ARRAY_CONTAINS
 status ASC
 ```
 
@@ -552,7 +567,7 @@ data class Reservation(
     val id: String = "",
     val hostId: String = "",
     val guestId: String = "",
-    val slotId: String = "",
+    val slotIds: List<String> = emptyList(),
     val startAt: Long = 0L,
     val endAt: Long = 0L,
     val purpose: String = ReservationPurpose.ETC.name,
@@ -618,7 +633,7 @@ interface ReservationRepository {
     suspend fun requestReservation(
         hostId: String,
         guestId: String,
-        slotId: String,
+        slotIds: List<String>,
         purpose: ReservationPurpose,
         message: String
     )

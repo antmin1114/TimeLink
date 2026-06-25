@@ -3,6 +3,9 @@ package com.kkm.timelink.domain.repository
 import com.kkm.timelink.domain.model.TimeSlot
 
 interface TimeSlotRepository {
+    /**
+     * Registers an available time range and splits it into independent TimeSlot documents.
+     */
     suspend fun createTimeSlot(
         hostId: String,
         startAt: Long,

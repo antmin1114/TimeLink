@@ -5,6 +5,8 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import com.kkm.timelink.domain.model.TimeSlot
 import com.kkm.timelink.domain.model.TimeSlotStatus
+import com.kkm.timelink.domain.model.overlaps
+import com.kkm.timelink.domain.model.splitTimeSlotRange
 import com.kkm.timelink.domain.repository.TimeSlotRepository
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -22,36 +24,43 @@ class FirestoreTimeSlotRepository @Inject constructor(
         durationMinutes: Int
     ) {
         require(hostId.isNotBlank()) { "사용자 ID가 필요합니다." }
-        require(durationMinutes == 30 || durationMinutes == 60) {
-            "시간 슬롯은 30분 또는 60분만 생성할 수 있습니다."
-        }
         require(startAt > System.currentTimeMillis()) { "과거 시간에는 슬롯을 생성할 수 없습니다." }
-        require(endAt == startAt + durationMinutes * MILLIS_PER_MINUTE) {
-            "종료 시간이 슬롯 길이와 일치하지 않습니다."
-        }
-
-        val duplicate = firestore.collection(TIME_SLOTS_COLLECTION)
-            .whereEqualTo(HOST_ID_FIELD, hostId)
-            .whereEqualTo(START_AT_FIELD, startAt)
-            .limit(1)
-            .get()
-            .await()
-
-        check(duplicate.isEmpty) { "같은 시간에 이미 생성된 슬롯이 있습니다." }
-
-        val document = firestore.collection(TIME_SLOTS_COLLECTION).document()
-        val now = System.currentTimeMillis()
-        val timeSlot = TimeSlot(
-            id = document.id,
-            hostId = hostId,
+        val requestedIntervals = splitTimeSlotRange(
             startAt = startAt,
             endAt = endAt,
-            durationMinutes = durationMinutes,
-            status = TimeSlotStatus.AVAILABLE.name,
-            createdAt = now,
-            updatedAt = now
+            durationMinutes = durationMinutes
         )
-        document.set(timeSlot).await()
+
+        val existingSlots = firestore.collection(TIME_SLOTS_COLLECTION)
+            .whereEqualTo(HOST_ID_FIELD, hostId)
+            .get()
+            .await()
+            .toObjects(TimeSlot::class.java)
+
+        val intervalsToCreate = requestedIntervals.filter { candidate ->
+            existingSlots.none(candidate::overlaps)
+        }
+        check(intervalsToCreate.isNotEmpty()) {
+            "선택한 시간 범위에 생성할 수 있는 새 슬롯이 없습니다."
+        }
+
+        val batch = firestore.batch()
+        val now = System.currentTimeMillis()
+        intervalsToCreate.forEach { interval ->
+            val document = firestore.collection(TIME_SLOTS_COLLECTION).document()
+            val timeSlot = TimeSlot(
+                id = document.id,
+                hostId = hostId,
+                startAt = interval.startAt,
+                endAt = interval.endAt,
+                durationMinutes = durationMinutes,
+                status = TimeSlotStatus.AVAILABLE.name,
+                createdAt = now,
+                updatedAt = now
+            )
+            batch.set(document, timeSlot)
+        }
+        batch.commit().await()
     }
 
     override suspend fun getHostTimeSlots(hostId: String): List<TimeSlot> {
@@ -158,6 +167,5 @@ class FirestoreTimeSlotRepository @Inject constructor(
         const val START_AT_FIELD = "startAt"
         const val STATUS_FIELD = "status"
         const val UPDATED_AT_FIELD = "updatedAt"
-        const val MILLIS_PER_MINUTE = 60_000L
     }
 }

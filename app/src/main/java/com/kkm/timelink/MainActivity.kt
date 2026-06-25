@@ -198,7 +198,7 @@ fun TimeLinkApp(
                 LaunchedEffect(Unit) {
                     timeSlotViewModel.events.collect { event ->
                         val message = when (event) {
-                            TimeSlotEvent.Created -> "시간 슬롯을 생성했습니다."
+                            TimeSlotEvent.Created -> "예약 가능 시간을 등록했습니다."
                             TimeSlotEvent.Disabled -> "시간 슬롯을 비활성화했습니다."
                             TimeSlotEvent.Enabled -> "시간 슬롯을 활성화했습니다."
                             is TimeSlotEvent.Error -> event.message
@@ -210,7 +210,9 @@ fun TimeLinkApp(
                 TimeSlotManagementScreen(
                     uiState = timeSlotUiState,
                     onDateSelected = timeSlotViewModel::selectDate,
-                    onTimeSelected = timeSlotViewModel::selectTime,
+                    onStartTimeSelected = timeSlotViewModel::selectStartTime,
+                    onEndTimeSelected = timeSlotViewModel::selectEndTime,
+                    onEndOfDaySelected = timeSlotViewModel::selectEndOfDay,
                     onDurationSelected = timeSlotViewModel::selectDuration,
                     onCreateClick = timeSlotViewModel::createTimeSlot,
                     onDisableClick = timeSlotViewModel::disableTimeSlot,

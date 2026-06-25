@@ -38,7 +38,9 @@ import java.time.format.DateTimeFormatter
 fun TimeSlotManagementScreen(
     uiState: TimeSlotUiState,
     onDateSelected: (LocalDate) -> Unit,
-    onTimeSelected: (Int, Int) -> Unit,
+    onStartTimeSelected: (Int, Int) -> Unit,
+    onEndTimeSelected: (Int, Int) -> Unit,
+    onEndOfDaySelected: () -> Unit,
     onDurationSelected: (Int) -> Unit,
     onCreateClick: () -> Unit,
     onDisableClick: (String) -> Unit,
@@ -70,16 +72,14 @@ fun TimeSlotManagementScreen(
         ) {
             item {
                 Text(
-                    text = "새 시간 슬롯",
+                    text = "예약 가능 시간 등록",
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(top = 12.dp)
                 )
             }
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("날짜", style = MaterialTheme.typography.labelLarge)
                     OutlinedButton(
                         onClick = {
                             DatePickerDialog(
@@ -94,33 +94,60 @@ fun TimeSlotManagementScreen(
                                 datePicker.minDate = System.currentTimeMillis()
                             }.show()
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(uiState.selectedDate.format(DATE_FORMATTER))
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            TimePickerDialog(
-                                context,
-                                { _, hour, minute -> onTimeSelected(hour, minute) },
-                                uiState.selectedHour,
-                                uiState.selectedMinute,
-                                true
-                            ).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("%02d:%02d".format(uiState.selectedHour, uiState.selectedMinute))
                     }
                 }
             }
             item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TimeInput(
+                        label = "시작 시간",
+                        timeText = formatTime(uiState.startHour, uiState.startMinute),
+                        onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, hour, minute -> onStartTimeSelected(hour, minute) },
+                                uiState.startHour,
+                                uiState.startMinute,
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                    TimeInput(
+                        label = "종료 시간",
+                        timeText = formatTime(uiState.endHour, uiState.endMinute),
+                        onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, hour, minute -> onEndTimeSelected(hour, minute) },
+                                uiState.endHour.coerceAtMost(23),
+                                uiState.endMinute,
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            item {
+                TextButton(onClick = onEndOfDaySelected) {
+                    Text("종료 시간을 24:00으로 설정")
+                }
+            }
+            item {
+                Text("슬롯 분할 단위", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(30, 60).forEach { duration ->
                         FilterChip(
                             selected = uiState.durationMinutes == duration,
                             onClick = { onDurationSelected(duration) },
-                            label = { Text("${duration}분") }
+                            label = { Text("${duration}분 단위") }
                         )
                     }
                 }
@@ -134,7 +161,7 @@ fun TimeSlotManagementScreen(
                     if (uiState.isCreating) {
                         CircularProgressIndicator()
                     } else {
-                        Text("시간 슬롯 생성")
+                        Text("예약 가능 시간 등록")
                     }
                 }
             }
@@ -177,6 +204,27 @@ fun TimeSlotManagementScreen(
             item {
                 Column(modifier = Modifier.padding(bottom = 24.dp)) {}
             }
+        }
+    }
+}
+
+@Composable
+private fun TimeInput(
+    label: String,
+    timeText: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge)
+        OutlinedButton(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(timeText)
         }
     }
 }
@@ -236,6 +284,8 @@ private fun statusLabel(status: String): String = when (status) {
     TimeSlotStatus.DISABLED.name -> "비활성화"
     else -> status
 }
+
+private fun formatTime(hour: Int, minute: Int): String = "%02d:%02d".format(hour, minute)
 
 private val DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 private val SLOT_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")

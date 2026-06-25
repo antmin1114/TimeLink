@@ -16,14 +16,29 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 import java.time.ZoneId
 import javax.inject.Inject
 
+private val defaultStartDateTime: LocalDateTime = LocalDateTime.now()
+    .plusHours(1)
+    .withMinute(0)
+    .withSecond(0)
+    .withNano(0)
+private val defaultEndDateTime: LocalDateTime = defaultStartDateTime.plusHours(1)
+
 data class TimeSlotUiState(
-    val selectedDate: LocalDate = LocalDate.now(),
-    val selectedHour: Int = LocalTime.now().plusHours(1).hour,
-    val selectedMinute: Int = 0,
+    val selectedDate: LocalDate = defaultStartDateTime.toLocalDate(),
+    val startHour: Int = defaultStartDateTime.hour,
+    val startMinute: Int = 0,
+    val endHour: Int = if (
+        defaultEndDateTime.toLocalDate().isAfter(defaultStartDateTime.toLocalDate())
+    ) {
+        24
+    } else {
+        defaultEndDateTime.hour
+    },
+    val endMinute: Int = 0,
     val durationMinutes: Int = 30,
     val timeSlots: List<TimeSlot> = emptyList(),
     val isLoading: Boolean = false,
@@ -58,8 +73,16 @@ class TimeSlotViewModel @Inject constructor(
         _uiState.update { it.copy(selectedDate = date) }
     }
 
-    fun selectTime(hour: Int, minute: Int) {
-        _uiState.update { it.copy(selectedHour = hour, selectedMinute = minute) }
+    fun selectStartTime(hour: Int, minute: Int) {
+        _uiState.update { it.copy(startHour = hour, startMinute = minute) }
+    }
+
+    fun selectEndTime(hour: Int, minute: Int) {
+        _uiState.update { it.copy(endHour = hour, endMinute = minute) }
+    }
+
+    fun selectEndOfDay() {
+        _uiState.update { it.copy(endHour = 24, endMinute = 0) }
     }
 
     fun selectDuration(durationMinutes: Int) {
@@ -76,11 +99,27 @@ class TimeSlotViewModel @Inject constructor(
 
         val state = _uiState.value
         val startAt = state.selectedDate
-            .atTime(state.selectedHour, state.selectedMinute)
+            .atTime(state.startHour, state.startMinute)
             .atZone(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
-        val endAt = startAt + state.durationMinutes * MILLIS_PER_MINUTE
+        val endAt = if (state.endHour == 24) {
+            state.selectedDate.plusDays(1).atStartOfDay()
+        } else {
+            state.selectedDate.atTime(state.endHour, state.endMinute)
+        }.atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+
+        if (endAt <= startAt) {
+            emitError("종료 시간은 시작 시간보다 늦어야 합니다.")
+            return
+        }
+        val slotDurationMillis = state.durationMinutes * MILLIS_PER_MINUTE
+        if ((endAt - startAt) % slotDurationMillis != 0L) {
+            emitError("선택한 시간 범위는 슬롯 단위로 정확히 나누어져야 합니다.")
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isCreating = true) }
