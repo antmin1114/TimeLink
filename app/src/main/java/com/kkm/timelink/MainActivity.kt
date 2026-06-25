@@ -39,7 +39,13 @@ import com.kkm.timelink.ui.profile.ProfileEvent
 import com.kkm.timelink.ui.profile.ProfileScreen
 import com.kkm.timelink.ui.profile.ProfileViewModel
 import com.kkm.timelink.ui.theme.TimeLinkTheme
+import com.kkm.timelink.ui.timeslot.TimeSlotEvent
+import com.kkm.timelink.ui.timeslot.TimeSlotManagementScreen
+import com.kkm.timelink.ui.timeslot.TimeSlotViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -67,6 +73,13 @@ fun TimeLinkApp(
     val credentialManager = remember {
         CredentialManager.create(context)
     }
+    val startDestination = remember {
+        if (uiState.isSignedIn) {
+            TimeLinkRoute.Home.route
+        } else {
+            TimeLinkRoute.Login.route
+        }
+    }
 
     LaunchedEffect(Unit) {
         authViewModel.events.collect { event ->
@@ -80,26 +93,28 @@ fun TimeLinkApp(
         }
     }
 
-    LaunchedEffect(uiState.isSignedIn) {
-        val route = if (uiState.isSignedIn) {
-            TimeLinkRoute.Home.route
-        } else {
-            TimeLinkRoute.Login.route
-        }
-        navController.navigate(route) {
-            popUpTo(0)
-            launchSingleTop = true
+    LaunchedEffect(authViewModel, navController) {
+        authViewModel.uiState
+            .map { it.isSignedIn }
+            .distinctUntilChanged()
+            .drop(1)
+            .collect { isSignedIn ->
+                val route = if (isSignedIn) {
+                    TimeLinkRoute.Home.route
+                } else {
+                    TimeLinkRoute.Login.route
+                }
+                navController.navigate(route) {
+                    popUpTo(0)
+                    launchSingleTop = true
+                }
         }
     }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = if (uiState.isSignedIn) {
-                TimeLinkRoute.Home.route
-            } else {
-                TimeLinkRoute.Login.route
-            },
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(TimeLinkRoute.Login.route) {
@@ -125,6 +140,9 @@ fun TimeLinkApp(
                         uiState.currentUserId?.let { uid ->
                             navController.navigate("profile/$uid")
                         }
+                    },
+                    onTimeSlotsClick = {
+                        navController.navigate(TimeLinkRoute.TimeSlots.route)
                     },
                     onSignOutClick = {
                         coroutineScope.launch {
@@ -170,6 +188,33 @@ fun TimeLinkApp(
                     onBioChange = profileViewModel::updateBio,
                     onProfileImageUrlChange = profileViewModel::updateProfileImageUrl,
                     onSaveClick = profileViewModel::saveProfile,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+            composable(TimeLinkRoute.TimeSlots.route) { backStackEntry ->
+                val timeSlotViewModel: TimeSlotViewModel = hiltViewModel(backStackEntry)
+                val timeSlotUiState by timeSlotViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    timeSlotViewModel.events.collect { event ->
+                        val message = when (event) {
+                            TimeSlotEvent.Created -> "시간 슬롯을 생성했습니다."
+                            TimeSlotEvent.Disabled -> "시간 슬롯을 비활성화했습니다."
+                            TimeSlotEvent.Enabled -> "시간 슬롯을 활성화했습니다."
+                            is TimeSlotEvent.Error -> event.message
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                TimeSlotManagementScreen(
+                    uiState = timeSlotUiState,
+                    onDateSelected = timeSlotViewModel::selectDate,
+                    onTimeSelected = timeSlotViewModel::selectTime,
+                    onDurationSelected = timeSlotViewModel::selectDuration,
+                    onCreateClick = timeSlotViewModel::createTimeSlot,
+                    onDisableClick = timeSlotViewModel::disableTimeSlot,
+                    onEnableClick = timeSlotViewModel::enableTimeSlot,
                     onBackClick = { navController.popBackStack() }
                 )
             }
@@ -242,5 +287,6 @@ private fun buildGoogleCredentialRequest(
 private enum class TimeLinkRoute(val route: String) {
     Login("login"),
     Home("home"),
-    Profile("profile/{uid}")
+    Profile("profile/{uid}"),
+    TimeSlots("time-slots")
 }

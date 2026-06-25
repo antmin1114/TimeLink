@@ -20,6 +20,7 @@ fun HomeScreen(
     currentUserId: String,
     isSigningOut: Boolean,
     onProfileClick: () -> Unit,
+    onTimeSlotsClick: () -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -44,6 +45,13 @@ fun HomeScreen(
             modifier = Modifier.padding(top = 24.dp)
         ) {
             Text(text = "프로필")
+        }
+        Button(
+            onClick = onTimeSlotsClick,
+            enabled = !isSigningOut,
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            Text(text = "시간 슬롯 관리")
         }
         Button(
             onClick = onSignOutClick,
