@@ -18,9 +18,11 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen(
     currentUserId: String,
+    uiState: HomeUiState,
     isSigningOut: Boolean,
     onProfileClick: () -> Unit,
     onTimeSlotsClick: () -> Unit,
+    onOpenReservationLinkClick: (String) -> Unit,
     onSignOutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -52,6 +54,19 @@ fun HomeScreen(
             modifier = Modifier.padding(top = 12.dp)
         ) {
             Text(text = "시간 슬롯 관리")
+        }
+        Text(
+            text = "예약 링크 ID: ${uiState.reservationLinkId.ifBlank { "불러오는 중" }}",
+            modifier = Modifier.padding(top = 16.dp)
+        )
+        Button(
+            onClick = { onOpenReservationLinkClick(uiState.reservationLinkId) },
+            enabled = !isSigningOut &&
+                !uiState.isLoadingProfile &&
+                uiState.reservationLinkId.isNotBlank(),
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            Text(text = "내 예약 링크 열기")
         }
         Button(
             onClick = onSignOutClick,

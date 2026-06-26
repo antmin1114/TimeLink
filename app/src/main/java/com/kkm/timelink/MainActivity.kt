@@ -34,10 +34,15 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.kkm.timelink.ui.auth.AuthEvent
 import com.kkm.timelink.ui.auth.AuthViewModel
 import com.kkm.timelink.ui.auth.LoginScreen
+import com.kkm.timelink.ui.home.HomeEvent
 import com.kkm.timelink.ui.home.HomeScreen
+import com.kkm.timelink.ui.home.HomeViewModel
 import com.kkm.timelink.ui.profile.ProfileEvent
 import com.kkm.timelink.ui.profile.ProfileScreen
 import com.kkm.timelink.ui.profile.ProfileViewModel
+import com.kkm.timelink.ui.reservation.HostReservationEvent
+import com.kkm.timelink.ui.reservation.HostReservationScreen
+import com.kkm.timelink.ui.reservation.HostReservationViewModel
 import com.kkm.timelink.ui.theme.TimeLinkTheme
 import com.kkm.timelink.ui.timeslot.TimeSlotEvent
 import com.kkm.timelink.ui.timeslot.TimeSlotManagementScreen
@@ -133,8 +138,24 @@ fun TimeLinkApp(
                 )
             }
             composable(TimeLinkRoute.Home.route) {
+                val homeViewModel: HomeViewModel = hiltViewModel()
+                val homeUiState by homeViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    homeViewModel.events.collect { event ->
+                        when (event) {
+                            is HomeEvent.Error -> Toast.makeText(
+                                context,
+                                event.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+
                 HomeScreen(
                     currentUserId = uiState.currentUserId.orEmpty(),
+                    uiState = homeUiState,
                     isSigningOut = uiState.isSigningOut,
                     onProfileClick = {
                         uiState.currentUserId?.let { uid ->
@@ -143,6 +164,9 @@ fun TimeLinkApp(
                     },
                     onTimeSlotsClick = {
                         navController.navigate(TimeLinkRoute.TimeSlots.route)
+                    },
+                    onOpenReservationLinkClick = { reservationLinkId ->
+                        navController.navigate("host/$reservationLinkId")
                     },
                     onSignOutClick = {
                         coroutineScope.launch {
@@ -220,6 +244,38 @@ fun TimeLinkApp(
                     onBackClick = { navController.popBackStack() }
                 )
             }
+            composable(
+                route = TimeLinkRoute.HostReservation.route,
+                arguments = listOf(
+                    navArgument("reservationLinkId") {
+                        type = NavType.StringType
+                    }
+                )
+            ) { backStackEntry ->
+                val hostReservationViewModel: HostReservationViewModel =
+                    hiltViewModel(backStackEntry)
+                val hostReservationUiState by hostReservationViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    hostReservationViewModel.events.collect { event ->
+                        val message = when (event) {
+                            HostReservationEvent.Requested -> "예약 신청을 보냈습니다."
+                            is HostReservationEvent.Error -> event.message
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                HostReservationScreen(
+                    uiState = hostReservationUiState,
+                    onDateSelected = hostReservationViewModel::selectDate,
+                    onSlotClick = hostReservationViewModel::selectSlot,
+                    onPurposeSelected = hostReservationViewModel::selectPurpose,
+                    onMessageChange = hostReservationViewModel::updateMessage,
+                    onRequestClick = hostReservationViewModel::requestReservation,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
@@ -290,5 +346,6 @@ private enum class TimeLinkRoute(val route: String) {
     Login("login"),
     Home("home"),
     Profile("profile/{uid}"),
-    TimeSlots("time-slots")
+    TimeSlots("time-slots"),
+    HostReservation("host/{reservationLinkId}")
 }

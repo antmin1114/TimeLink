@@ -48,6 +48,18 @@ class FirestoreUserRepository @Inject constructor(
             .toObject(User::class.java)
     }
 
+    override suspend fun getUserByReservationLinkId(reservationLinkId: String): User? {
+        require(reservationLinkId.isNotBlank()) { "예약 링크 ID가 필요합니다." }
+        return firestore.collection(USERS_COLLECTION)
+            .whereEqualTo("reservationLinkId", reservationLinkId)
+            .limit(1)
+            .get()
+            .await()
+            .documents
+            .firstOrNull()
+            ?.toObject(User::class.java)
+    }
+
     override suspend fun updateProfile(
         uid: String,
         nickname: String,
