@@ -17,11 +17,14 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val reservationLinkId: String = "",
+    val reservationLinkInput: String = "",
+    val isOpeningReservationLink: Boolean = false,
     val isLoadingProfile: Boolean = false
 )
 
 sealed interface HomeEvent {
     data class Error(val message: String) : HomeEvent
+    data class NavigateToReservationLink(val reservationLinkId: String) : HomeEvent
 }
 
 @HiltViewModel
@@ -65,6 +68,37 @@ class HomeViewModel @Inject constructor(
                     HomeEvent.Error(
                         throwable.message?.takeIf { it.isNotBlank() }
                             ?: "예약 링크 정보를 불러오지 못했습니다."
+                    )
+                )
+            }
+        }
+    }
+
+    fun updateReservationLinkInput(value: String) {
+        _uiState.update { it.copy(reservationLinkInput = value) }
+    }
+
+    fun openReservationLinkInput() {
+        val reservationLinkId = _uiState.value.reservationLinkInput.trim()
+        if (reservationLinkId.isBlank()) {
+            emitError("Reservation link ID is required.")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isOpeningReservationLink = true) }
+            runCatching {
+                userRepository.getUserByReservationLinkId(reservationLinkId)
+                    ?: error("Reservation link ID does not exist.")
+            }.onSuccess {
+                _uiState.update { it.copy(isOpeningReservationLink = false) }
+                _events.emit(HomeEvent.NavigateToReservationLink(reservationLinkId))
+            }.onFailure { throwable ->
+                _uiState.update { it.copy(isOpeningReservationLink = false) }
+                _events.emit(
+                    HomeEvent.Error(
+                        throwable.message?.takeIf { it.isNotBlank() }
+                            ?: "Failed to validate reservation link ID."
                     )
                 )
             }

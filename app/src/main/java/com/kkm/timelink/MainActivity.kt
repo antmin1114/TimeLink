@@ -43,6 +43,13 @@ import com.kkm.timelink.ui.profile.ProfileViewModel
 import com.kkm.timelink.ui.reservation.HostReservationEvent
 import com.kkm.timelink.ui.reservation.HostReservationScreen
 import com.kkm.timelink.ui.reservation.HostReservationViewModel
+import com.kkm.timelink.ui.reservation.ReservationDetailEvent
+import com.kkm.timelink.ui.reservation.ReservationDetailScreen
+import com.kkm.timelink.ui.reservation.ReservationDetailViewModel
+import com.kkm.timelink.ui.reservation.ReservationListEvent
+import com.kkm.timelink.ui.reservation.ReservationListMode
+import com.kkm.timelink.ui.reservation.ReservationListScreen
+import com.kkm.timelink.ui.reservation.ReservationListViewModel
 import com.kkm.timelink.ui.theme.TimeLinkTheme
 import com.kkm.timelink.ui.timeslot.TimeSlotEvent
 import com.kkm.timelink.ui.timeslot.TimeSlotManagementScreen
@@ -149,6 +156,10 @@ fun TimeLinkApp(
                                 event.message,
                                 Toast.LENGTH_SHORT
                             ).show()
+
+                            is HomeEvent.NavigateToReservationLink -> {
+                                navController.navigate("host/${event.reservationLinkId}")
+                            }
                         }
                     }
                 }
@@ -167,6 +178,18 @@ fun TimeLinkApp(
                     },
                     onOpenReservationLinkClick = { reservationLinkId ->
                         navController.navigate("host/$reservationLinkId")
+                    },
+                    onReservationLinkInputChange = homeViewModel::updateReservationLinkInput,
+                    onOpenReservationLinkInputClick = homeViewModel::openReservationLinkInput,
+                    onReceivedReservationsClick = {
+                        navController.navigate(
+                            "reservations/${ReservationListMode.RECEIVED.name}"
+                        )
+                    },
+                    onMyReservationsClick = {
+                        navController.navigate(
+                            "reservations/${ReservationListMode.MINE.name}"
+                        )
                     },
                     onSignOutClick = {
                         coroutineScope.launch {
@@ -212,6 +235,59 @@ fun TimeLinkApp(
                     onBioChange = profileViewModel::updateBio,
                     onProfileImageUrlChange = profileViewModel::updateProfileImageUrl,
                     onSaveClick = profileViewModel::saveProfile,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = TimeLinkRoute.ReservationList.route,
+                arguments = listOf(navArgument("mode") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val reservationListViewModel: ReservationListViewModel =
+                    hiltViewModel(backStackEntry)
+                val reservationListUiState by reservationListViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    reservationListViewModel.events.collect { event ->
+                        when (event) {
+                            is ReservationListEvent.Error -> Toast.makeText(
+                                context,
+                                event.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+
+                ReservationListScreen(
+                    uiState = reservationListUiState,
+                    onReservationClick = { reservationId ->
+                        navController.navigate("reservation/$reservationId")
+                    },
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = TimeLinkRoute.ReservationDetail.route,
+                arguments = listOf(navArgument("reservationId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val reservationDetailViewModel: ReservationDetailViewModel =
+                    hiltViewModel(backStackEntry)
+                val reservationDetailUiState by reservationDetailViewModel.uiState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    reservationDetailViewModel.events.collect { event ->
+                        when (event) {
+                            is ReservationDetailEvent.Error -> Toast.makeText(
+                                context,
+                                event.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+
+                ReservationDetailScreen(
+                    uiState = reservationDetailUiState,
                     onBackClick = { navController.popBackStack() }
                 )
             }
@@ -347,5 +423,7 @@ private enum class TimeLinkRoute(val route: String) {
     Home("home"),
     Profile("profile/{uid}"),
     TimeSlots("time-slots"),
-    HostReservation("host/{reservationLinkId}")
+    HostReservation("host/{reservationLinkId}"),
+    ReservationList("reservations/{mode}"),
+    ReservationDetail("reservation/{reservationId}")
 }

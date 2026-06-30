@@ -1,6 +1,7 @@
 package com.kkm.timelink.data.reservation
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.kkm.timelink.domain.model.Reservation
 import com.kkm.timelink.domain.model.ReservationPurpose
 import com.kkm.timelink.domain.model.ReservationStatus
@@ -87,10 +88,45 @@ class FirestoreReservationRepository @Inject constructor(
         document.set(reservation).await()
     }
 
+    override suspend fun getReceivedReservations(hostId: String): List<Reservation> {
+        require(hostId.isNotBlank()) { "Host ID is required." }
+
+        return firestore.collection(RESERVATIONS_COLLECTION)
+            .whereEqualTo(HOST_ID_FIELD, hostId)
+            .orderBy(CREATED_AT_FIELD, Query.Direction.DESCENDING)
+            .get()
+            .await()
+            .toObjects(Reservation::class.java)
+    }
+
+    override suspend fun getMyReservations(guestId: String): List<Reservation> {
+        require(guestId.isNotBlank()) { "Guest ID is required." }
+
+        return firestore.collection(RESERVATIONS_COLLECTION)
+            .whereEqualTo(GUEST_ID_FIELD, guestId)
+            .orderBy(CREATED_AT_FIELD, Query.Direction.DESCENDING)
+            .get()
+            .await()
+            .toObjects(Reservation::class.java)
+    }
+
+    override suspend fun getReservation(reservationId: String): Reservation? {
+        require(reservationId.isNotBlank()) { "Reservation ID is required." }
+
+        return firestore.collection(RESERVATIONS_COLLECTION)
+            .document(reservationId)
+            .get()
+            .await()
+            .toObject(Reservation::class.java)
+    }
+
     private companion object {
         const val TIME_SLOTS_COLLECTION = "time_slots"
         const val RESERVATIONS_COLLECTION = "reservations"
+        const val HOST_ID_FIELD = "hostId"
+        const val GUEST_ID_FIELD = "guestId"
         const val SLOT_IDS_FIELD = "slotIds"
         const val STATUS_FIELD = "status"
+        const val CREATED_AT_FIELD = "createdAt"
     }
 }
