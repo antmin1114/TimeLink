@@ -58,7 +58,7 @@ class ReservationListViewModel @Inject constructor(
     fun loadReservations() {
         val uid = authRepository.getCurrentUserId()
         if (uid == null) {
-            emitError("Login is required.")
+            emitError("로그인이 필요합니다.")
             return
         }
 
@@ -98,9 +98,9 @@ class ReservationListViewModel @Inject constructor(
             throwable.code == FirebaseFirestoreException.Code.FAILED_PRECONDITION &&
             throwable.message.orEmpty().contains("requires an index", ignoreCase = true)
         ) {
-            return "Firestore index is not ready for reservation list queries."
+            return "예약 목록 조회에 필요한 Firestore 인덱스가 아직 준비되지 않았습니다."
         }
         return throwable.message?.takeIf { it.isNotBlank() }
-            ?: "Failed to load reservations."
+            ?: "예약 목록을 불러오지 못했습니다."
     }
 }

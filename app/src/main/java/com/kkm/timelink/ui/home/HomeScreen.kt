@@ -95,7 +95,7 @@ fun HomeScreen(
         OutlinedTextField(
             value = uiState.reservationLinkInput,
             onValueChange = onReservationLinkInputChange,
-            label = { Text("테스트 링크 ID") },
+            label = { Text("호스트 링크 ID") },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -111,7 +111,7 @@ fun HomeScreen(
             if (uiState.isOpeningReservationLink) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp))
             } else {
-                Text(text = "입력한 ID로 예약")
+                Text(text = "입력한 ID로 예약하기")
             }
         }
         Button(

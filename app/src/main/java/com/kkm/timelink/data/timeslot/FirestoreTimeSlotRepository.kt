@@ -41,7 +41,7 @@ class FirestoreTimeSlotRepository @Inject constructor(
             existingSlots.none(candidate::overlaps)
         }
         check(intervalsToCreate.isNotEmpty()) {
-            "선택한 시간 범위에 생성할 수 있는 새 슬롯이 없습니다."
+            "선택한 시간 범위에 생성 가능한 슬롯이 없습니다."
         }
 
         val batch = firestore.batch()
@@ -126,7 +126,7 @@ class FirestoreTimeSlotRepository @Inject constructor(
             val snapshot = transaction.get(slotRef)
             check(snapshot.exists()) { "시간 슬롯을 찾을 수 없습니다." }
             check(snapshot.getString(STATUS_FIELD) == TimeSlotStatus.AVAILABLE.name) {
-                "예약 가능 상태의 슬롯만 비활성화할 수 있습니다."
+                "예약 가능한 상태의 슬롯만 비활성화할 수 있습니다."
             }
             transaction.update(
                 slotRef,

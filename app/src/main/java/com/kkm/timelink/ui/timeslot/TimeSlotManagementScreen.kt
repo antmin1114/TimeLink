@@ -72,7 +72,7 @@ fun TimeSlotManagementScreen(
         ) {
             item {
                 Text(
-                    text = "예약 가능 시간 등록",
+                    text = "예약 가능한 시간 등록",
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(top = 12.dp)
                 )
@@ -186,7 +186,7 @@ fun TimeSlotManagementScreen(
             } else if (uiState.timeSlots.isEmpty()) {
                 item {
                     Text(
-                        text = "오늘 이후에 생성된 시간 슬롯이 없습니다.",
+                        text = "오늘 이후 생성된 시간 슬롯이 없습니다.",
                         modifier = Modifier.padding(vertical = 24.dp)
                     )
                 }

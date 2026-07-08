@@ -17,4 +17,13 @@ interface ReservationRepository {
     suspend fun getMyReservations(guestId: String): List<Reservation>
 
     suspend fun getReservation(reservationId: String): Reservation?
+
+    suspend fun approveReservation(reservationId: String)
+
+    suspend fun rejectReservation(
+        reservationId: String,
+        reason: String
+    )
+
+    suspend fun cancelReservation(reservationId: String)
 }

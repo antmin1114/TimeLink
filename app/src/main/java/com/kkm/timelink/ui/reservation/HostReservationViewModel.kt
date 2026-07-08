@@ -125,7 +125,7 @@ class HostReservationViewModel @Inject constructor(
         val state = _uiState.value
         val host = state.host
         if (host == null) {
-            emitError("Host 정보를 찾을 수 없습니다.")
+            emitError("호스트 정보를 찾을 수 없습니다.")
             return
         }
         if (state.selectedSlotIds.isEmpty()) {
@@ -169,7 +169,7 @@ class HostReservationViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             runCatching {
                 val host = userRepository.getUserByReservationLinkId(reservationLinkId)
-                    ?: error("Host 정보를 찾을 수 없습니다.")
+                    ?: error("호스트 정보를 찾을 수 없습니다.")
                 val slots = timeSlotRepository.getAvailableTimeSlots(host.uid)
                 host to slots
             }.onSuccess { (host, slots) ->

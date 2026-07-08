@@ -81,7 +81,7 @@ class HomeViewModel @Inject constructor(
     fun openReservationLinkInput() {
         val reservationLinkId = _uiState.value.reservationLinkInput.trim()
         if (reservationLinkId.isBlank()) {
-            emitError("Reservation link ID is required.")
+            emitError("예약 링크 ID를 입력해 주세요.")
             return
         }
 
@@ -89,7 +89,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isOpeningReservationLink = true) }
             runCatching {
                 userRepository.getUserByReservationLinkId(reservationLinkId)
-                    ?: error("Reservation link ID does not exist.")
+                    ?: error("존재하지 않는 예약 링크 ID입니다.")
             }.onSuccess {
                 _uiState.update { it.copy(isOpeningReservationLink = false) }
                 _events.emit(HomeEvent.NavigateToReservationLink(reservationLinkId))
@@ -98,7 +98,7 @@ class HomeViewModel @Inject constructor(
                 _events.emit(
                     HomeEvent.Error(
                         throwable.message?.takeIf { it.isNotBlank() }
-                            ?: "Failed to validate reservation link ID."
+                            ?: "예약 링크 ID를 확인하지 못했습니다."
                     )
                 )
             }

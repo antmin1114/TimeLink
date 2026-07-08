@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kkm.timelink.domain.model.ReservationPurpose
@@ -70,7 +69,7 @@ fun HostReservationScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
             ) {
                 CircularProgressIndicator()
             }
@@ -233,7 +232,7 @@ private fun HostProfile(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = nickname.ifBlank { "Host" },
+            text = nickname.ifBlank { "호스트" },
             style = MaterialTheme.typography.headlineSmall
         )
         if (bio.isNotBlank()) {

@@ -19,10 +19,15 @@ import javax.inject.Inject
 
 data class ReservationDetailUiState(
     val reservation: Reservation? = null,
-    val isLoading: Boolean = false
+    val currentUserId: String? = null,
+    val isLoading: Boolean = false,
+    val isActionLoading: Boolean = false
 )
 
 sealed interface ReservationDetailEvent {
+    data object Approved : ReservationDetailEvent
+    data object Rejected : ReservationDetailEvent
+    data object Cancelled : ReservationDetailEvent
     data class Error(val message: String) : ReservationDetailEvent
 }
 
@@ -48,7 +53,7 @@ class ReservationDetailViewModel @Inject constructor(
     fun loadReservation() {
         val uid = authRepository.getCurrentUserId()
         if (uid == null) {
-            emitError("Login is required.")
+            emitError("로그인이 필요합니다.")
             return
         }
 
@@ -56,15 +61,16 @@ class ReservationDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
             runCatching {
                 val reservation = reservationRepository.getReservation(reservationId)
-                    ?: error("Reservation not found.")
+                    ?: error("예약 정보를 찾을 수 없습니다.")
                 check(reservation.hostId == uid || reservation.guestId == uid) {
-                    "You do not have permission to view this reservation."
+                    "이 예약을 조회할 권한이 없습니다."
                 }
                 reservation
             }.onSuccess { reservation ->
                 _uiState.update {
                     it.copy(
                         reservation = reservation,
+                        currentUserId = uid,
                         isLoading = false
                     )
                 }
@@ -73,7 +79,58 @@ class ReservationDetailViewModel @Inject constructor(
                 _events.emit(
                     ReservationDetailEvent.Error(
                         throwable.message?.takeIf { it.isNotBlank() }
-                            ?: "Failed to load reservation detail."
+                            ?: "예약 상세 정보를 불러오지 못했습니다."
+                    )
+                )
+            }
+        }
+    }
+
+    fun approveReservation() {
+        updateReservationStatus(
+            action = { reservationRepository.approveReservation(reservationId) },
+            successEvent = ReservationDetailEvent.Approved
+        )
+    }
+
+    fun rejectReservation(reason: String) {
+        updateReservationStatus(
+            action = { reservationRepository.rejectReservation(reservationId, reason) },
+            successEvent = ReservationDetailEvent.Rejected
+        )
+    }
+
+    fun cancelReservation() {
+        updateReservationStatus(
+            action = { reservationRepository.cancelReservation(reservationId) },
+            successEvent = ReservationDetailEvent.Cancelled
+        )
+    }
+
+    private fun updateReservationStatus(
+        action: suspend () -> Unit,
+        successEvent: ReservationDetailEvent
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isActionLoading = true) }
+            runCatching {
+                action()
+                reservationRepository.getReservation(reservationId)
+                    ?: error("예약 정보를 찾을 수 없습니다.")
+            }.onSuccess { reservation ->
+                _uiState.update {
+                    it.copy(
+                        reservation = reservation,
+                        isActionLoading = false
+                    )
+                }
+                _events.emit(successEvent)
+            }.onFailure { throwable ->
+                _uiState.update { it.copy(isActionLoading = false) }
+                _events.emit(
+                    ReservationDetailEvent.Error(
+                        throwable.message?.takeIf { it.isNotBlank() }
+                            ?: "예약 상태 변경에 실패했습니다."
                     )
                 )
             }

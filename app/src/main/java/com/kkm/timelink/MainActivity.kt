@@ -277,6 +277,24 @@ fun TimeLinkApp(
                 LaunchedEffect(Unit) {
                     reservationDetailViewModel.events.collect { event ->
                         when (event) {
+                            ReservationDetailEvent.Approved -> Toast.makeText(
+                                context,
+                                "예약을 승인했습니다.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            ReservationDetailEvent.Rejected -> Toast.makeText(
+                                context,
+                                "예약을 거절했습니다.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            ReservationDetailEvent.Cancelled -> Toast.makeText(
+                                context,
+                                "예약을 취소했습니다.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             is ReservationDetailEvent.Error -> Toast.makeText(
                                 context,
                                 event.message,
@@ -288,6 +306,9 @@ fun TimeLinkApp(
 
                 ReservationDetailScreen(
                     uiState = reservationDetailUiState,
+                    onApproveClick = reservationDetailViewModel::approveReservation,
+                    onRejectClick = reservationDetailViewModel::rejectReservation,
+                    onCancelClick = reservationDetailViewModel::cancelReservation,
                     onBackClick = { navController.popBackStack() }
                 )
             }

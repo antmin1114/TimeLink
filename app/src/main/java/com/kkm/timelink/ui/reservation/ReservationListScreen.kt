@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kkm.timelink.domain.model.Reservation
 import com.kkm.timelink.domain.model.ReservationPurpose
+import com.kkm.timelink.domain.model.ReservationStatus
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -42,14 +43,14 @@ fun ReservationListScreen(
                 title = {
                     Text(
                         when (uiState.mode) {
-                            ReservationListMode.RECEIVED -> "Received Reservations"
-                            ReservationListMode.MINE -> "My Reservations"
+                            ReservationListMode.RECEIVED -> "받은 예약"
+                            ReservationListMode.MINE -> "내 예약"
                         }
                     )
                 },
                 navigationIcon = {
                     TextButton(onClick = onBackClick) {
-                        Text("Back")
+                        Text("뒤로")
                     }
                 }
             )
@@ -77,7 +78,7 @@ fun ReservationListScreen(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("No reservations.")
+                    Text("예약이 없습니다.")
                 }
             }
 
@@ -128,7 +129,7 @@ private fun ReservationListItem(
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = reservation.status,
+                    text = reservationStatusLabel(reservation.status),
                     style = MaterialTheme.typography.labelLarge
                 )
             }
@@ -137,7 +138,7 @@ private fun ReservationListItem(
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = reservation.message.ifBlank { "No message" },
+                text = reservation.message.ifBlank { "메시지 없음" },
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2
             )
@@ -146,11 +147,19 @@ private fun ReservationListItem(
 }
 
 internal fun purposeLabel(value: String): String = when (value) {
-    ReservationPurpose.COFFEE_CHAT.name -> "Coffee chat"
-    ReservationPurpose.MEAL.name -> "Meal"
-    ReservationPurpose.STUDY.name -> "Study"
-    ReservationPurpose.CONSULTING.name -> "Consulting"
-    ReservationPurpose.ETC.name -> "Etc"
+    ReservationPurpose.COFFEE_CHAT.name -> "커피챗"
+    ReservationPurpose.MEAL.name -> "식사"
+    ReservationPurpose.STUDY.name -> "스터디"
+    ReservationPurpose.CONSULTING.name -> "상담"
+    ReservationPurpose.ETC.name -> "기타"
+    else -> value
+}
+
+internal fun reservationStatusLabel(value: String): String = when (value) {
+    ReservationStatus.PENDING.name -> "승인 대기"
+    ReservationStatus.APPROVED.name -> "승인 완료"
+    ReservationStatus.REJECTED.name -> "거절됨"
+    ReservationStatus.CANCELLED.name -> "취소됨"
     else -> value
 }
 
