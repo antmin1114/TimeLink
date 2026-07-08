@@ -40,10 +40,10 @@ class HomeViewModel @Inject constructor(
     val events: SharedFlow<HomeEvent> = _events.asSharedFlow()
 
     init {
-        loadReservationLink()
+        loadReservationLink(showLoading = true)
     }
 
-    fun loadReservationLink() {
+    fun loadReservationLink(showLoading: Boolean = _uiState.value.reservationLinkId.isBlank()) {
         val uid = authRepository.getCurrentUserId()
         if (uid == null) {
             emitError("로그인이 필요합니다.")
@@ -51,7 +51,9 @@ class HomeViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingProfile = true) }
+            if (showLoading) {
+                _uiState.update { it.copy(isLoadingProfile = true) }
+            }
             runCatching {
                 userRepository.createUserIfMissing(uid)
                 userRepository.getUser(uid)?.reservationLinkId.orEmpty()

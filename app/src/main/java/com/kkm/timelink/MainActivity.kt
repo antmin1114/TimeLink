@@ -25,6 +25,7 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -78,6 +79,7 @@ fun TimeLinkApp(
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val uiState by authViewModel.uiState.collectAsState()
@@ -144,9 +146,15 @@ fun TimeLinkApp(
                     }
                 )
             }
-            composable(TimeLinkRoute.Home.route) {
+            composable(TimeLinkRoute.Home.route) { backStackEntry ->
                 val homeViewModel: HomeViewModel = hiltViewModel()
                 val homeUiState by homeViewModel.uiState.collectAsState()
+
+                LaunchedEffect(currentBackStackEntry) {
+                    if (currentBackStackEntry == backStackEntry) {
+                        homeViewModel.loadReservationLink()
+                    }
+                }
 
                 LaunchedEffect(Unit) {
                     homeViewModel.events.collect { event ->
@@ -245,6 +253,12 @@ fun TimeLinkApp(
                 val reservationListViewModel: ReservationListViewModel =
                     hiltViewModel(backStackEntry)
                 val reservationListUiState by reservationListViewModel.uiState.collectAsState()
+
+                LaunchedEffect(currentBackStackEntry) {
+                    if (currentBackStackEntry == backStackEntry) {
+                        reservationListViewModel.loadReservations()
+                    }
+                }
 
                 LaunchedEffect(Unit) {
                     reservationListViewModel.events.collect { event ->

@@ -52,10 +52,10 @@ class ReservationListViewModel @Inject constructor(
     val events: SharedFlow<ReservationListEvent> = _events.asSharedFlow()
 
     init {
-        loadReservations()
+        loadReservations(showLoading = true)
     }
 
-    fun loadReservations() {
+    fun loadReservations(showLoading: Boolean = _uiState.value.reservations.isEmpty()) {
         val uid = authRepository.getCurrentUserId()
         if (uid == null) {
             emitError("로그인이 필요합니다.")
@@ -63,7 +63,9 @@ class ReservationListViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            if (showLoading) {
+                _uiState.update { it.copy(isLoading = true) }
+            }
             runCatching {
                 when (mode) {
                     ReservationListMode.RECEIVED ->
