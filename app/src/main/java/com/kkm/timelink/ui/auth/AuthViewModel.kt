@@ -3,6 +3,7 @@ package com.kkm.timelink.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kkm.timelink.domain.repository.AuthRepository
+import com.kkm.timelink.domain.repository.NotificationRepository
 import com.kkm.timelink.domain.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -30,7 +31,8 @@ sealed interface AuthEvent {
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -40,6 +42,10 @@ class AuthViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<AuthEvent>()
     val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
+
+    init {
+        _uiState.value.currentUserId?.let(::syncNotificationToken)
+    }
 
     fun signInWithGoogle(idToken: String?) {
         if (idToken.isNullOrBlank()) {
@@ -59,6 +65,7 @@ class AuthViewModel @Inject constructor(
                     )
                 }
                 createProfileIfMissing(uid)
+                syncNotificationToken(uid)
             }.onFailure {
                 _uiState.update { it.copy(isLoading = false) }
                 _events.emit(AuthEvent.Error("Google 로그인에 실패했습니다."))
@@ -74,6 +81,9 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSigningOut = true) }
             runCatching {
+                authRepository.getCurrentUserId()?.let { uid ->
+                    runCatching { notificationRepository.clearToken(uid) }
+                }
                 authRepository.signOut()
             }.onSuccess {
                 _uiState.update {
@@ -96,6 +106,12 @@ class AuthViewModel @Inject constructor(
             }.onFailure {
                 _events.emit(AuthEvent.Error("로그인은 완료됐지만 프로필 생성에 실패했습니다."))
             }
+        }
+    }
+
+    private fun syncNotificationToken(uid: String) {
+        viewModelScope.launch {
+            runCatching { notificationRepository.syncToken(uid) }
         }
     }
 
