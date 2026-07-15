@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kkm.timelink",
+      "sha256_cert_fingerprints": [
+        "2E:3A:62:60:F6:73:14:6C:93:BB:F6:18:4F:E2:FA:04:D1:DF:64:B4:58:FC:8F:68:65:BB:FD:81:0F:01:2E:7F"
+      ]
+    }
+  }
+]

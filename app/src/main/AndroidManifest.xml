@@ -37,6 +37,30 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="timelink-af0f6.web.app"
+                    android:pathPrefix="/host/"
+                    android:scheme="https" />
+            </intent-filter>
+
+            <!-- 카카오톡 인앱 브라우저용 커스텀 스킴 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="timelink"
+                    android:host="host" />
+            </intent-filter>
         </activity>
     </application>
 

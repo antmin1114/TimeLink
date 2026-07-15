@@ -2,6 +2,19 @@
   "functions": {
     "source": "functions"
   },
+  "hosting": {
+    "public": "hosting",
+    "ignore": [
+      "firebase.json",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/host/**",
+        "destination": "/index.html"
+      }
+    ]
+  },
   "firestore": {
     "indexes": "firestore.indexes.json"
   }

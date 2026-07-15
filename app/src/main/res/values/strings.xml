@@ -4,4 +4,7 @@
     <string name="notification_channel_name">예약 알림</string>
     <string name="notification_channel_description">예약 신청, 승인, 거절 알림</string>
     <string name="notification_default_title">TimeLink</string>
+    <string name="reservation_link_base_url">https://timelink-af0f6.web.app/host</string>
+    <string name="share_link_subject">TimeLink 예약 링크</string>
+    <string name="share_link_chooser_title">예약 링크 공유</string>
 </resources>

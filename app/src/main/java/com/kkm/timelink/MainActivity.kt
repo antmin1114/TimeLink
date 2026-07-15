@@ -1,8 +1,11 @@
 package com.kkm.timelink
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
@@ -15,8 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.credentials.ClearCredentialStateRequest
@@ -66,26 +72,42 @@ import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private var deepLinkReservationLinkId by mutableStateOf<String?>(null)
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("DeepLink", "onCreate data=${intent?.data}")
+        deepLinkReservationLinkId = intent.toReservationLinkId()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
         enableEdgeToEdge()
         setContent {
             TimeLinkTheme {
-                TimeLinkApp()
+                TimeLinkApp(
+                    deepLinkReservationLinkId = deepLinkReservationLinkId,
+                    onDeepLinkHandled = { deepLinkReservationLinkId = null }
+                )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        Log.d("DeepLink", "onNewIntent data=${intent.data}")
+        deepLinkReservationLinkId = intent.toReservationLinkId()
     }
 }
 
 @Composable
 fun TimeLinkApp(
+    deepLinkReservationLinkId: String? = null,
+    onDeepLinkHandled: () -> Unit = {},
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
@@ -97,6 +119,7 @@ fun TimeLinkApp(
     val credentialManager = remember {
         CredentialManager.create(context)
     }
+    val latestDeepLinkReservationLinkId by rememberUpdatedState(deepLinkReservationLinkId)
     val startDestination = remember {
         if (uiState.isSignedIn) {
             TimeLinkRoute.Home.route
@@ -123,16 +146,28 @@ fun TimeLinkApp(
             .distinctUntilChanged()
             .drop(1)
             .collect { isSignedIn ->
-                val route = if (isSignedIn) {
-                    TimeLinkRoute.Home.route
-                } else {
-                    TimeLinkRoute.Login.route
-                }
-                navController.navigate(route) {
-                    popUpTo(0)
-                    launchSingleTop = true
+                if (!isSignedIn) {
+                    navController.navigate(TimeLinkRoute.Login.route) {
+                        popUpTo(0)
+                        launchSingleTop = true
+                    }
+                } else if (latestDeepLinkReservationLinkId == null) {
+                    navController.navigate(TimeLinkRoute.Home.route) {
+                        popUpTo(0)
+                        launchSingleTop = true
+                    }
                 }
         }
+    }
+
+    LaunchedEffect(deepLinkReservationLinkId, uiState.isSignedIn) {
+        val reservationLinkId = deepLinkReservationLinkId ?: return@LaunchedEffect
+        if (!uiState.isSignedIn) return@LaunchedEffect
+
+        navController.navigate("host/${Uri.encode(reservationLinkId)}") {
+            launchSingleTop = true
+        }
+        onDeepLinkHandled()
     }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -196,6 +231,19 @@ fun TimeLinkApp(
                     },
                     onOpenReservationLinkClick = { reservationLinkId ->
                         navController.navigate("host/$reservationLinkId")
+                    },
+                    onShareReservationLinkClick = { reservationLink ->
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_link_subject))
+                            putExtra(Intent.EXTRA_TEXT, reservationLink)
+                        }
+                        context.startActivity(
+                            Intent.createChooser(
+                                shareIntent,
+                                context.getString(R.string.share_link_chooser_title)
+                            )
+                        )
                     },
                     onReservationLinkInputChange = homeViewModel::updateReservationLinkInput,
                     onOpenReservationLinkInputClick = homeViewModel::openReservationLinkInput,
@@ -471,4 +519,15 @@ private enum class TimeLinkRoute(val route: String) {
     HostReservation("host/{reservationLinkId}"),
     ReservationList("reservations/{mode}"),
     ReservationDetail("reservation/{reservationId}")
+}
+
+private fun Intent.toReservationLinkId(): String? {
+    val uri = data ?: return null
+    if (action != Intent.ACTION_VIEW || uri.scheme != "https") return null
+    if (uri.host != "timelink-af0f6.web.app") return null
+
+    val segments = uri.pathSegments
+    return segments.takeIf { it.size == 2 && it[0] == "host" }
+        ?.get(1)
+        ?.takeIf { it.isNotBlank() }
 }

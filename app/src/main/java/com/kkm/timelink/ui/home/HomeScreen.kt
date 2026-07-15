@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.kkm.timelink.R
 
 @Composable
 fun HomeScreen(
@@ -29,6 +31,7 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onTimeSlotsClick: () -> Unit,
     onOpenReservationLinkClick: (String) -> Unit,
+    onShareReservationLinkClick: (String) -> Unit,
     onReservationLinkInputChange: (String) -> Unit,
     onOpenReservationLinkInputClick: () -> Unit,
     onReceivedReservationsClick: () -> Unit,
@@ -37,6 +40,11 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
+    val reservationLink = if (uiState.reservationLinkId.isBlank()) {
+        ""
+    } else {
+        "${stringResource(R.string.reservation_link_base_url)}/${uiState.reservationLinkId}"
+    }
 
     Column(
         modifier = modifier
@@ -69,7 +77,7 @@ fun HomeScreen(
             Text(text = "시간 슬롯 관리")
         }
         Text(
-            text = "예약 링크 ID: ${uiState.reservationLinkId.ifBlank { "불러오는 중" }}",
+            text = "예약 링크: ${reservationLink.ifBlank { "불러오는 중" }}",
             modifier = Modifier.padding(top = 16.dp)
         )
         Button(
@@ -83,14 +91,23 @@ fun HomeScreen(
         }
         Button(
             onClick = {
-                clipboardManager.setText(AnnotatedString(uiState.reservationLinkId))
+                clipboardManager.setText(AnnotatedString(reservationLink))
             },
             enabled = !isSigningOut &&
                 !uiState.isLoadingProfile &&
                 uiState.reservationLinkId.isNotBlank(),
             modifier = Modifier.padding(top = 12.dp)
         ) {
-            Text(text = "링크 ID 복사")
+            Text(text = "예약 링크 복사")
+        }
+        Button(
+            onClick = { onShareReservationLinkClick(reservationLink) },
+            enabled = !isSigningOut &&
+                !uiState.isLoadingProfile &&
+                reservationLink.isNotBlank(),
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            Text(text = "예약 링크 공유")
         }
         OutlinedTextField(
             value = uiState.reservationLinkInput,
