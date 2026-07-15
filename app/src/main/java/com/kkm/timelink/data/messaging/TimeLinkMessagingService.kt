@@ -39,6 +39,7 @@ class TimeLinkMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.data[TITLE_KEY] ?: getString(R.string.notification_default_title)
         val body = message.data[BODY_KEY] ?: return
+        val reservationId = message.data[RESERVATION_ID_KEY]
 
         if (
             android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
@@ -48,10 +49,11 @@ class TimeLinkMessagingService : FirebaseMessagingService() {
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(MainActivity.EXTRA_RESERVATION_ID, reservationId)
         }
         val pendingIntent = PendingIntent.getActivity(
             this,
-            0,
+            reservationId?.hashCode() ?: 0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -77,5 +79,6 @@ class TimeLinkMessagingService : FirebaseMessagingService() {
         const val NOTIFICATION_CHANNEL_ID = "reservation_updates"
         private const val TITLE_KEY = "title"
         private const val BODY_KEY = "body"
+        private const val RESERVATION_ID_KEY = "reservationId"
     }
 }

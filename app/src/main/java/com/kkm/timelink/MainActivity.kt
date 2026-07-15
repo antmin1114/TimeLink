@@ -73,6 +73,7 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var deepLinkReservationLinkId by mutableStateOf<String?>(null)
+    private var notificationReservationId by mutableStateOf<String?>(null)
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -82,6 +83,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d("DeepLink", "onCreate data=${intent?.data}")
         deepLinkReservationLinkId = intent.toReservationLinkId()
+        notificationReservationId = intent.getReservationId()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -90,7 +92,9 @@ class MainActivity : ComponentActivity() {
             TimeLinkTheme {
                 TimeLinkApp(
                     deepLinkReservationLinkId = deepLinkReservationLinkId,
-                    onDeepLinkHandled = { deepLinkReservationLinkId = null }
+                    onDeepLinkHandled = { deepLinkReservationLinkId = null },
+                    notificationReservationId = notificationReservationId,
+                    onNotificationReservationHandled = { notificationReservationId = null }
                 )
             }
         }
@@ -101,6 +105,11 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         Log.d("DeepLink", "onNewIntent data=${intent.data}")
         deepLinkReservationLinkId = intent.toReservationLinkId()
+        notificationReservationId = intent.getReservationId()
+    }
+
+    companion object {
+        const val EXTRA_RESERVATION_ID = "com.kkm.timelink.extra.RESERVATION_ID"
     }
 }
 
@@ -108,6 +117,8 @@ class MainActivity : ComponentActivity() {
 fun TimeLinkApp(
     deepLinkReservationLinkId: String? = null,
     onDeepLinkHandled: () -> Unit = {},
+    notificationReservationId: String? = null,
+    onNotificationReservationHandled: () -> Unit = {},
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
@@ -120,6 +131,7 @@ fun TimeLinkApp(
         CredentialManager.create(context)
     }
     val latestDeepLinkReservationLinkId by rememberUpdatedState(deepLinkReservationLinkId)
+    val latestNotificationReservationId by rememberUpdatedState(notificationReservationId)
     val startDestination = remember {
         if (uiState.isSignedIn) {
             TimeLinkRoute.Home.route
@@ -151,7 +163,10 @@ fun TimeLinkApp(
                         popUpTo(0)
                         launchSingleTop = true
                     }
-                } else if (latestDeepLinkReservationLinkId == null) {
+                } else if (
+                    latestDeepLinkReservationLinkId == null &&
+                    latestNotificationReservationId == null
+                ) {
                     navController.navigate(TimeLinkRoute.Home.route) {
                         popUpTo(0)
                         launchSingleTop = true
@@ -168,6 +183,16 @@ fun TimeLinkApp(
             launchSingleTop = true
         }
         onDeepLinkHandled()
+    }
+
+    LaunchedEffect(notificationReservationId, uiState.isSignedIn) {
+        val reservationId = notificationReservationId ?: return@LaunchedEffect
+        if (!uiState.isSignedIn) return@LaunchedEffect
+
+        navController.navigate("reservation/${Uri.encode(reservationId)}") {
+            launchSingleTop = true
+        }
+        onNotificationReservationHandled()
     }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -523,11 +548,22 @@ private enum class TimeLinkRoute(val route: String) {
 
 private fun Intent.toReservationLinkId(): String? {
     val uri = data ?: return null
-    if (action != Intent.ACTION_VIEW || uri.scheme != "https") return null
-    if (uri.host != "timelink-af0f6.web.app") return null
+    if (action != Intent.ACTION_VIEW) return null
 
     val segments = uri.pathSegments
-    return segments.takeIf { it.size == 2 && it[0] == "host" }
-        ?.get(1)
-        ?.takeIf { it.isNotBlank() }
+    return when {
+        uri.scheme == "https" && uri.host == "timelink-af0f6.web.app" -> {
+            segments.takeIf { it.size == 2 && it[0] == "host" }?.get(1)
+        }
+
+        uri.scheme == "timelink" && uri.host == "host" -> {
+            segments.takeIf { it.size == 1 }?.first()
+        }
+
+        else -> null
+    }?.takeIf { it.isNotBlank() }
 }
+
+private fun Intent?.getReservationId(): String? = this
+    ?.getStringExtra(MainActivity.EXTRA_RESERVATION_ID)
+    ?.takeIf { it.isNotBlank() }
