@@ -435,7 +435,23 @@ fun TimeLinkApp(
                     onCreateClick = timeSlotViewModel::createTimeSlot,
                     onDisableClick = timeSlotViewModel::disableTimeSlot,
                     onEnableClick = timeSlotViewModel::enableTimeSlot,
-                    onBackClick = { navController.popBackStack() }
+                    onBackClick = { navController.popBackStack() },
+                    onHomeClick = {
+                        navController.navigate(TimeLinkRoute.Home.route) {
+                            popUpTo(TimeLinkRoute.Home.route) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                    onReservationsClick = {
+                        navController.navigate(
+                            "reservations/${ReservationListMode.MINE.name}"
+                        )
+                    },
+                    onProfileClick = {
+                        uiState.currentUserId?.let { uid ->
+                            navController.navigate("profile/$uid")
+                        }
+                    }
                 )
             }
             composable(

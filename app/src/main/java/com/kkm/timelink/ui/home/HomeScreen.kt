@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -159,6 +161,7 @@ fun HomeScreen(
         }
 
         HomeBottomBar(
+            onHomeClick = {},
             onReservationsClick = onMyReservationsClick,
             onProfileClick = onProfileClick,
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -238,7 +241,12 @@ private fun MenuCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(description, color = HomeMuted, fontSize = 14.sp, lineHeight = 21.sp)
             }
-            Text("›", color = Color(0xFF969CAC), fontSize = 38.sp, fontWeight = FontWeight.Light)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color(0xFF969CAC),
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
@@ -277,7 +285,8 @@ private fun LogoutCard(isSigningOut: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun HomeBottomBar(
+fun HomeBottomBar(
+    onHomeClick: () -> Unit,
     onReservationsClick: () -> Unit,
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -289,7 +298,7 @@ private fun HomeBottomBar(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BottomItem("홈", HomeIcon.Home, true, {})
+            BottomItem("홈", HomeIcon.Home, true, onHomeClick)
             BottomItem("예약", HomeIcon.Calendar, false, onReservationsClick)
             BottomItem("프로필", HomeIcon.Profile, false, onProfileClick)
         }
