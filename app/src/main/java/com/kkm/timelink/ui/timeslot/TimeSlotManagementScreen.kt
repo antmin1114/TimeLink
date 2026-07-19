@@ -26,7 +26,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -35,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kkm.timelink.domain.model.TimeSlot
 import com.kkm.timelink.domain.model.TimeSlotStatus
-import com.kkm.timelink.ui.home.HomeBottomBar
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -67,7 +65,7 @@ fun TimeSlotManagementScreen(
     Box(modifier.fillMaxSize().background(Color(0xFFF7F8FE))) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 92.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { ScreenHeader(onBackClick) }
@@ -96,12 +94,6 @@ fun TimeSlotManagementScreen(
                 }
             }
         }
-        HomeBottomBar(
-            onHomeClick = onHomeClick,
-            onReservationsClick = onReservationsClick,
-            onProfileClick = onProfileClick,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 

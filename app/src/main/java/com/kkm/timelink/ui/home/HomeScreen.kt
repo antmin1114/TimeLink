@@ -77,7 +77,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(top = 24.dp, bottom = 116.dp)
+                .padding(top = 24.dp, bottom = 40.dp)
         ) {
             HomeTopBar()
             Spacer(modifier = Modifier.height(47.dp))
@@ -128,10 +128,20 @@ fun HomeScreen(
                 icon = HomeIcon.Clipboard,
                 iconColor = Color(0xFF4C8DF7),
                 iconBackground = Color(0xFFEDF5FF),
-                title = "내 예약 리스트",
-                description = "받은 예약을 확인하고\n관리해보세요.",
+                title = "받은 예약",
+                description = "다른 사용자가 보낸 예약 신청을\n확인하고 관리해보세요.",
                 enabled = !isSigningOut,
                 onClick = onReceivedReservationsClick
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            MenuCard(
+                icon = HomeIcon.Calendar,
+                iconColor = Color(0xFF9A67EA),
+                iconBackground = Color(0xFFF5EEFF),
+                title = "신청한 예약",
+                description = "내가 다른 사용자에게 신청한\n예약을 확인해보세요.",
+                enabled = !isSigningOut,
+                onClick = onMyReservationsClick
             )
             Spacer(modifier = Modifier.height(10.dp))
             MenuCard(
@@ -160,12 +170,6 @@ fun HomeScreen(
             )
         }
 
-        HomeBottomBar(
-            onHomeClick = {},
-            onReservationsClick = onMyReservationsClick,
-            onProfileClick = onProfileClick,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 
