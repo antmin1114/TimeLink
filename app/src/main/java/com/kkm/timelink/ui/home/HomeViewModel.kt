@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class HomeUiState(
+    val nickname: String = "",
     val reservationLinkId: String = "",
     val reservationLinkInput: String = "",
     val isOpeningReservationLink: Boolean = false,
@@ -56,11 +57,12 @@ class HomeViewModel @Inject constructor(
             }
             runCatching {
                 userRepository.createUserIfMissing(uid)
-                userRepository.getUser(uid)?.reservationLinkId.orEmpty()
-            }.onSuccess { reservationLinkId ->
+                userRepository.getUser(uid)
+            }.onSuccess { user ->
                 _uiState.update {
                     it.copy(
-                        reservationLinkId = reservationLinkId,
+                        nickname = user?.nickname.orEmpty(),
+                        reservationLinkId = user?.reservationLinkId.orEmpty(),
                         isLoadingProfile = false
                     )
                 }
