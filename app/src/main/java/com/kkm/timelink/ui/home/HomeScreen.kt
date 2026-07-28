@@ -283,7 +283,12 @@ private fun LogoutCard(isSigningOut: Boolean, onClick: () -> Unit) {
                 modifier = Modifier.padding(start = 15.dp)
             )
             Spacer(Modifier.weight(1f))
-            Text("›", color = Color(0xFFA6ABBA), fontSize = 34.sp)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color(0xFF969CAC),
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
