@@ -84,6 +84,19 @@ class FirestoreUserRepository @Inject constructor(
             .await()
     }
 
+    override suspend fun resetProfileImage(uid: String) {
+        require(uid.isNotBlank()) { "사용자 ID가 필요합니다." }
+        firestore.collection(USERS_COLLECTION)
+            .document(uid)
+            .update(
+                mapOf(
+                    "profileImageUrl" to FieldValue.delete(),
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            )
+            .await()
+    }
+
     private companion object {
         const val USERS_COLLECTION = "users"
     }

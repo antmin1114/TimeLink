@@ -325,6 +325,7 @@ fun TimeLinkApp(
                     onNicknameChange = profileViewModel::updateNickname,
                     onBioChange = profileViewModel::updateBio,
                     onProfileImageUrlChange = profileViewModel::updateProfileImageUrl,
+                    onResetProfileImageClick = profileViewModel::resetProfileImage,
                     onSaveClick = profileViewModel::saveProfile,
                     onBackClick = { navController.popBackStack() }
                 )

@@ -59,6 +59,22 @@ class ProfileViewModel @Inject constructor(
         _uiState.update { it.copy(profileImageUrl = value) }
     }
 
+    fun resetProfileImage() {
+        if (_uiState.value.isSaving) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true) }
+            runCatching {
+                userRepository.resetProfileImage(uid)
+            }.onSuccess {
+                _uiState.update { it.copy(profileImageUrl = "", isSaving = false) }
+                _events.emit(ProfileEvent.Saved)
+            }.onFailure { throwable ->
+                _uiState.update { it.copy(isSaving = false) }
+                _events.emit(ProfileEvent.Error(toProfileSaveMessage(throwable)))
+            }
+        }
+    }
+
     fun saveProfile() {
         val state = _uiState.value
         viewModelScope.launch {

@@ -13,4 +13,5 @@ interface UserRepository {
         bio: String?,
         profileImageUrl: String?
     )
+    suspend fun resetProfileImage(uid: String)
 }
